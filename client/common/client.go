@@ -21,6 +21,7 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	isFinished bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -28,6 +29,7 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
+		isFinished: false,
 	}
 	return client
 }
@@ -48,6 +50,12 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) Shutdown() error {
+	c.conn.Close()
+	c.isFinished = true
+	return nil
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
@@ -55,7 +63,7 @@ func (c *Client) StartClientLoop() {
 
 loop:
 	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
+	for timeout := time.After(c.config.LoopLapse); !c.isFinished; {
 		select {
 		case <-timeout:
 	        log.Infof("action: timeout_detected | result: success | client_id: %v",
@@ -92,7 +100,10 @@ loop:
         )
 
 		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
+
+		if !isFinished {
+			time.Sleep(c.config.LoopPeriod)
+		}
 	}
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
