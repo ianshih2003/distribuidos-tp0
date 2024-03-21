@@ -11,6 +11,9 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -87,6 +90,19 @@ func PrintConfig(v *viper.Viper) {
     )
 }
 
+func InitializeSignalListener(client *common.Client) {
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGTERM)
+
+	go func(client *common.Client) {
+		sig := <-sigs
+		logrus.Infof("action: received termination signal | result: in_progress | signal: %s", sig)
+		client.Shutdown()
+		logrus.Infof("action: received termination signal | result: success | signal: %s", sig)
+	}(client)
+}
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -108,5 +124,6 @@ func main() {
 	}
 
 	client := common.NewClient(clientConfig)
+	InitializeSignalListener(client)
 	client.StartClientLoop()
 }
