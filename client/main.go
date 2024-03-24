@@ -10,10 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -38,6 +39,12 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
+
+	v.BindEnv("nombre")
+	v.BindEnv("apellido")
+	v.BindEnv("documento")
+	v.BindEnv("nacimiento")
+	v.BindEnv("numero")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -69,11 +76,11 @@ func InitLogger(logLevel string) error {
 		return err
 	}
 
-    customFormatter := &logrus.TextFormatter{
-      TimestampFormat: "2006-01-02 15:04:05",
-      FullTimestamp: false,
-    }
-    logrus.SetFormatter(customFormatter)
+	customFormatter := &logrus.TextFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+		FullTimestamp:   false,
+	}
+	logrus.SetFormatter(customFormatter)
 	logrus.SetLevel(level)
 	return nil
 }
@@ -82,12 +89,12 @@ func InitLogger(logLevel string) error {
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
 	logrus.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_lapse: %v | loop_period: %v | log_level: %s",
-	    v.GetString("id"),
-	    v.GetString("server.address"),
-	    v.GetDuration("loop.lapse"),
-	    v.GetDuration("loop.period"),
-	    v.GetString("log.level"),
-    )
+		v.GetString("id"),
+		v.GetString("server.address"),
+		v.GetDuration("loop.lapse"),
+		v.GetDuration("loop.period"),
+		v.GetString("log.level"),
+	)
 }
 
 func InitializeSignalListener(client *common.Client) {
@@ -114,7 +121,7 @@ func main() {
 	}
 
 	// Print program config with debugging purposes
-	PrintConfig(v)
+	// PrintConfig(v)
 
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
@@ -123,7 +130,9 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	client := common.NewClient(clientConfig)
-	InitializeSignalListener(client)
-	client.StartClientLoop()
+	bet := common.NewBet(v.GetString("id"), v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
+
+	agency := common.NewAgency(bet, clientConfig)
+
+	agency.SendBet()
 }

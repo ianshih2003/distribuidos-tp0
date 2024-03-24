@@ -20,48 +20,62 @@ Los targets disponibles son:
 
 
 ### Servidor
-El servidor del presente ejemplo es un EchoServer: los mensajes recibidos por el cliente son devueltos inmediatamente. El servidor actual funciona de la siguiente forma:
-1. Servidor acepta una nueva conexión.
-2. Servidor recibe mensaje del cliente y procede a responder el mismo.
-3. Servidor desconecta al cliente.
-4. Servidor procede a recibir una conexión nuevamente.
+El servidor representa una central de Loteria Nacional: recibe apuestas de distintas agencias y realiza un sorteo. El servidor actual funciona de la sigueinte forma:
+1. Servidor acepta una nueva conexion
+2. Servidor recibe mensaje del cliente, que contiene la longitud de la apuesta a realizar y procede a responder con `suc` si se recibio correctamente
+3. Servidor recibe otro mensaje del cliente, esta vez conteniendo la apuesta, la almacena en el archivo `bets.csv` y responde `suc`
+4. Servidor desconecta al cliente
+5. Servidor procede a recibir una conexion nuevamente
+
 
 ### Cliente
-El cliente del presente ejemplo se conecta reiteradas veces al servidor y envía mensajes de la siguiente forma.
-1. Cliente se conecta al servidor.
-2. Cliente genera mensaje incremental.
-recibe mensaje del cliente y procede a responder el mismo.
-3. Cliente envía mensaje al servidor y espera mensaje de respuesta.
-Servidor desconecta al cliente.
-4. Cliente vuelve al paso 2.
+El cliente representa una agencia de apuestas y envia mensajes de la siguiente forma.
+1. Cliente se conecta al servidor
+2. Cliente envia la longitud de la apuesta a enviar.
+Recibe confirmacion del servidor
+3. Cliente envia la apuesta.
+Recibe la confirmacion del servidor
+4. Finaliza ejecucion
+
+### Protocolo
+El mensaje enviado del cliente al servidor esta conformado por
+`{agencia}|{nombre}|{apellido}|{documento}|{fecha de nacimiento}|{numero}`
+
+Flujo general:
+
+![flujo general](imgs/flujo_general.png)
+
+Ejemplo de flujo para la siguiente apuesta:
+
+* Agencia: 1
+* Nombre: Santiago Lionel
+* Apellido: Lorca
+* Documento: 30904465
+* Fecha de nacimiento: 1999-03-17
+* Numero: 7574
+
+![flujo ejemplo](imgs/flujo_ejemplo.png)
+
 
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 
 ```
 $ make docker-compose-logs
 docker compose -f docker-compose-dev.yaml logs -f
-client1  | time="2023-03-17 04:36:59" level=info msg="action: config | result: success | client_id: 1 | server_address: server:12345 | loop_lapse: 20s | loop_period: 5s | log_level: DEBUG"
-client1  | time="2023-03-17 04:36:59" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°1\n"
-server   | 2023-03-17 04:36:59 DEBUG    action: config | result: success | port: 12345 | listen_backlog: 5 | logging_level: DEBUG
-server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: in_progress
-server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: success | ip: 172.25.125.3
-server   | 2023-03-17 04:36:59 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°1
-server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: in_progress
-server   | 2023-03-17 04:37:04 INFO     action: accept_connections | result: success | ip: 172.25.125.3
-server   | 2023-03-17 04:37:04 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°2
-server   | 2023-03-17 04:37:04 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-17 04:37:04" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°2\n"
-server   | 2023-03-17 04:37:09 INFO     action: accept_connections | result: success | ip: 172.25.125.3
-server   | 2023-03-17 04:37:09 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°3
-server   | 2023-03-17 04:37:09 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-17 04:37:09" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°3\n"
-server   | 2023-03-17 04:37:14 INFO     action: accept_connections | result: success | ip: 172.25.125.3
-server   | 2023-03-17 04:37:14 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°4
-client1  | time="2023-03-17 04:37:14" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°4\n"
-server   | 2023-03-17 04:37:14 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-17 04:37:19" level=info msg="action: timeout_detected | result: success | client_id: 1"
-client1  | time="2023-03-17 04:37:19" level=info msg="action: loop_finished | result: success | client_id: 1"
-client1 exited with code 0
+client1  | time="2024-03-24 22:56:35" level=error msg="action: receive_confirm_message | result: sucess | client_id: 1"
+client1  | time="2024-03-24 22:56:35" level=error msg="action: receive_confirm_message | result: sucess | client_id: 1"
+client1  | time="2024-03-24 22:56:35" level=info msg="action: apuesta_enviada | result: success | dni: 30904465 | numero: 7574"
+server   | 2024-03-24 22:56:35 DEBUG    action: config | result: success | port: 12345 | listen_backlog: 5 | logging_level: DEBUG
+server   | 2024-03-24 22:56:35 INFO     action: accept_connections | result: in_progress
+server   | 2024-03-24 22:56:35 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server   | 2024-03-24 22:56:35 INFO     action: receive_message_length | result: success | length: 48
+server   | 2024-03-24 22:56:35 INFO     action: send sucess message | result: success
+server   | 2024-03-24 22:56:35 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: b'1|Santiago Lionel|Lorca|30904465|1999-03-17|7574'
+server   | 2024-03-24 22:56:35 INFO     action: apuesta_almacenada | result: success | dni: 30904465 | numero: 7574.
+server   | 2024-03-24 22:56:35 INFO     action: send sucess message | result: success
+server   | 2024-03-24 22:56:35 INFO     action: closing client socket | result: in_progress
+server   | 2024-03-24 22:56:35 INFO     action: closing client socket | result: success
+server   | 2024-03-24 22:56:35 INFO     action: accept_connections | result: in_progress
 ```
 
 ### Creacion de docker-compose
