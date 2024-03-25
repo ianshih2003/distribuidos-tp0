@@ -4,6 +4,7 @@ import signal
 from common.utils import process_incoming_message
 
 MAX_MESSAGE_BYTES = 4
+TIMEOUT = 2
 
 
 class Server:
@@ -23,9 +24,6 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         while True:
             try:
                 client_sock = self.__accept_new_connection()
@@ -59,26 +57,28 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        try:
-            msg_length = self.__receive_message_length()
+        self.client_sock.settimeout(TIMEOUT)
+        while True:
+            try:
+                msg_length = self.__receive_message_length()
 
-            if msg_length == 0:
-                return
+                if msg_length == 0:
+                    return
 
-            msg = self.__safe_receive(msg_length).rstrip()
-            addr = self.client_sock.getpeername()
-            logging.info(
-                f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+                msg = self.__safe_receive(msg_length).rstrip()
+                addr = self.client_sock.getpeername()
+                logging.info(
+                    f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
 
-            process_incoming_message(msg)
+                process_incoming_message(msg)
 
-            self.__send_success_message()
-        except OSError as e:
-            self.__send_error_message()
-            logging.error(
-                f"action: receive_message | result: fail | error: {e}")
-        finally:
-            self._close_client_socket()
+                self.__send_success_message()
+            except OSError as e:
+                self.__send_error_message()
+                logging.error(
+                    f"action: receive_message | result: fail | error: {e}")
+                break
+        self._close_client_socket()
 
     def __accept_new_connection(self):
         """

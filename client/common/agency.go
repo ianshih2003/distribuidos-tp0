@@ -1,43 +1,63 @@
 package common
 
 import (
+	"fmt"
+	"os"
+
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
+
+const MAX_BETS = 32
 
 // Agency entity
 type Agency struct {
-	bet    *Bet
 	client *Client
 }
 
-func NewAgency(client_config ClientConfig, v *viper.Viper) *Agency {
+func NewAgency(client_config ClientConfig) *Agency {
 	client := NewClient(client_config)
 
-	bet := NewBet(v.GetString("id"), v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
-
 	agency := &Agency{
-		bet:    bet,
 		client: client,
 	}
 
 	return agency
 }
 
-func (agency *Agency) SendBet() {
-	bet := agency.bet
-	err := agency.client.StartClient(bet.serialize())
+func (agency *Agency) Start() {
+	file, err := os.Open(fmt.Sprintf("/dataset/agency-%s.csv", agency.client.config.ID))
+
+	defer file.Close()
+
+	defer agency.client.createClientSocket()
+
+	if err != nil {
+		log.Errorf("action: abrir_archivo | result: fail | client_id %s | error %v", agency.client.config.ID, err)
+		return
+	}
+
+	err = agency.client.createClientSocket()
 
 	if err != nil {
 		return
 	}
 
-	log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %s",
-		bet.document,
-		bet.number,
-	)
+	for {
+
+		bets, err := readBets(file, agency.client.config.ID, agency.client.config.MaxBatchSize)
+
+		if err != nil {
+			log.Errorf("action: leer_apuestas | result: fail | client_id %s | error %v", agency.client.config.ID, err)
+		}
+
+		agency.SendBets(bets)
+	}
+
 }
 
-func (agency *Agency) Start() {
-	agency.SendBet()
+func (agency *Agency) SendBets(bets []*Bet) {
+	serialized := serialize_multiple(bets)
+
+	log.Infof("serialized %s", string(serialized))
+	agency.client.SendMessage(serialized)
 }
