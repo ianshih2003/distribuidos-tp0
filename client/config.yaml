@@ -6,3 +6,4 @@ loop:
   period: "5s"
 log:
   level: "info"
+max_batch_size: "8092"

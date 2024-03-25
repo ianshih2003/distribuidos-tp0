@@ -17,6 +17,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	MaxBatchSize  int
 }
 
 // Client Entity that encapsulates how
@@ -56,18 +57,6 @@ func (c *Client) Shutdown() error {
 	c.conn.Close()
 	c.isFinished = true
 	return nil
-}
-
-// StartClient Send messages to the server
-func (c *Client) StartClient(message []byte) error {
-	// Create the connection the server
-	c.createClientSocket()
-
-	err := c.SendMessage(message)
-
-	c.Shutdown()
-
-	return err
 }
 
 func (c *Client) SendMessageLength(message_length int) error {

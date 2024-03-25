@@ -9,6 +9,7 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 BET_MESSAGE_FIELD_SEPARATOR = "|"
+BET_BATCH_SEPARATOR = ";"
 
 
 """ A lottery bet registry. """
@@ -36,6 +37,19 @@ class Bet:
             BET_MESSAGE_FIELD_SEPARATOR)
 
         return Bet(agency, first_name, last_name, document, birthdate, number)
+
+    @staticmethod
+    def deserialize_multiple(message: bytes):
+        bet_string = message.decode()
+
+        bets = []
+
+        for bet in bet_string.split(BET_BATCH_SEPARATOR):
+            if not bet:
+                continue
+            bets.append(Bet.deserialize(bet.encode()))
+
+        return bets
 
 
 """ Checks whether a bet won the prize or not. """
@@ -73,7 +87,8 @@ def load_bets() -> list[Bet]:
 
 
 def process_incoming_message(message: bytes):
-    bet = Bet.deserialize(message)
-    store_bets([bet])
-    logging.info(
-        f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}.")
+    bets = Bet.deserialize_multiple(message)
+    store_bets(bets)
+    for bet in bets:
+        logging.info(
+            f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}.")
