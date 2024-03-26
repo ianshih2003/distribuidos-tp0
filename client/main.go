@@ -112,4 +112,9 @@ func main() {
 	agency := common.NewAgency(clientConfig)
 
 	agency.Start()
+
+	logrus.Infof("action: apuestas_enviadas | result: success | client_id: %s", clientConfig.ID)
+
+	agency.AskForWinners()
+
 }

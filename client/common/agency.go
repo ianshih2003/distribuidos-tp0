@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,11 +53,52 @@ func (agency *Agency) Start() {
 
 		agency.SendBets(bets)
 	}
-
 }
 
 func (agency *Agency) SendBets(bets []*Bet) {
 	serialized := serializeMultiple(bets)
 
-	agency.client.SendMessage(serialized)
+	agency.client.SendMessage(serialized, true)
+}
+
+func (agency *Agency) AskForWinners() error {
+
+	message := fmt.Sprintf("winners,%s", agency.client.config.ID)
+
+	var err error
+
+	for {
+		agency.client.createClientSocket()
+
+		agency.client.SendMessage([]byte(message), false)
+
+		res, err := agency.client.Receive()
+
+		if err != nil {
+			break
+		}
+
+		if res != nil && string(res) != "waiting" {
+			winners := parseWinners(res)
+			agency.AnnounceWinners(winners)
+			break
+		}
+
+		agency.client.Shutdown()
+
+		time.Sleep(time.Duration(1))
+	}
+
+	agency.client.Shutdown()
+
+	return err
+}
+
+func parseWinners(bytes []byte) []string {
+	log.Infof("%d", len(strings.Split(string(bytes), ",")))
+	return strings.Split(string(bytes), ",")
+}
+
+func (agency *Agency) AnnounceWinners(winners []string) {
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", len(winners))
 }

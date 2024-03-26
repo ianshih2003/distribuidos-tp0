@@ -12,7 +12,7 @@ def create_docker_compose(n):
             'version': '3.9',
             'name': 'tp0',
             'services': {
-                'server': build_server(),
+                'server': build_server(n),
 
             },
             'networks': build_network()
@@ -55,7 +55,7 @@ def build_client(i):
     }
 
 
-def build_server():
+def build_server(n):
     return {
         'container_name': 'server',
         'image': 'server:latest',
@@ -63,6 +63,7 @@ def build_server():
         'environment': [
             'PYTHONUNBUFFERED=1',
             'LOGGING_LEVEL=DEBUG'
+            f'CLIENTS={n}'
         ],
         'networks': [
             'testing_net'
