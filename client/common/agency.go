@@ -145,5 +145,9 @@ func parseWinners(bytes []byte) []string {
 }
 
 func (agency *Agency) AnnounceWinners(winners []string) {
-	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", len(winners))
+	length := len(winners)
+	if len(winners[0]) == 0 {
+		length = 0
+	}
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", length)
 }
