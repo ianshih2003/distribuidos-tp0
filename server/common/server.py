@@ -4,9 +4,10 @@ import signal
 from common.utils import load_bets, process_bets, get_winner_bets_by_agency
 
 MAX_MESSAGE_BYTES = 4
-TIMEOUT = 1.0
 EXIT = "exit"
 WINNERS = "winners"
+CONFIRMATION_MSG_LENGTH = 3
+SUCCESS_MSG = "suc"
 
 
 class Server:
@@ -199,10 +200,10 @@ class Server:
     def __send(self, message: bytes):
         self.__safe_send(len(message).to_bytes(MAX_MESSAGE_BYTES, 'little'))
 
-        if self.__safe_receive(3).decode() != "suc":
+        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
             raise socket.error("rejected")
 
         self.__safe_send(message)
 
-        if self.__safe_receive(3).decode() != "suc":
+        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG":
             raise socket.error("rejected")

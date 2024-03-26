@@ -9,6 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const WAITING_MESSAGE = "waiting"
+const WINNERS_SEPARATOR = ","
+const CSV_SEPARATOR = ","
+
 // Agency entity
 type Agency struct {
 	client *Client
@@ -78,7 +82,7 @@ func (agency *Agency) AskForWinners() error {
 			break
 		}
 
-		if res != nil && string(res) != "waiting" {
+		if res != nil && string(res) != WAITING_MESSAGE {
 			winners := parseWinners(res)
 			agency.AnnounceWinners(winners)
 			break
@@ -95,7 +99,7 @@ func (agency *Agency) AskForWinners() error {
 }
 
 func parseWinners(bytes []byte) []string {
-	return strings.Split(string(bytes), ",")
+	return strings.Split(string(bytes), WINNERS_SEPARATOR)
 }
 
 func (agency *Agency) AnnounceWinners(winners []string) {

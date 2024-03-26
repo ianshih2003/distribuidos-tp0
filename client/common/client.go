@@ -15,6 +15,8 @@ import (
 
 const CONFIRM_MSG_LENGTH = 3
 const MAX_MSG_BYTES = 4
+const SUCCESS_MSG = "suc"
+const ERROR_MSG = "err"
 const EXIT_MSG = "exit"
 
 // ClientConfig Configuration used by the client
@@ -139,8 +141,13 @@ func (c *Client) SendAny(message []byte) error {
 func (c *Client) ReceiveConfirmMsg() error {
 	n, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
 
-	if err != nil || len(n) != CONFIRM_MSG_LENGTH {
-		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v | error: %v",
+	response := string(buf)
+	if response == SUCCESS_MSG {
+		log.Infof("action: receive_confirm_message | result: success | client_id: %v",
+			c.config.ID,
+		)
+	} else if response == ERROR_MSG {
+		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v",
 			c.config.ID,
 		)
 	}
@@ -190,4 +197,20 @@ func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
 
 	return result, err
 
+}
+
+func (c *Client) Receive() (res []byte, res_error error) {
+	rcv_length, err := c.SafeReceive(MAX_MSG_BYTES)
+
+	c.SafeSend([]byte(SUCCESS_MSG))
+
+	msg_length := int(binary.LittleEndian.Uint32(rcv_length))
+
+	if msg_length == 0 {
+		return []byte{}, err
+	}
+
+	res, _ = c.SafeReceive(msg_length)
+
+	return res, c.SafeSend([]byte(SUCCESS_MSG))
 }
