@@ -7,8 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const MAX_BETS = 32
-
 // Agency entity
 type Agency struct {
 	client *Client
