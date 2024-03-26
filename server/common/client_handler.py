@@ -1,50 +1,30 @@
 import socket
 import logging
 import signal
-from common.utils import decode_utf8, encode_string_utf8, load_bets, process_bets, get_winner_bets_by_agency
+import time
+from common.utils import load_bets, process_bets, get_winner_bets_by_agency
 
 MAX_MESSAGE_BYTES = 4
 EXIT = "exit"
 WINNERS = "winners"
 CONFIRMATION_MSG_LENGTH = 3
 SUCCESS_MSG = "suc"
+ERROR_MSG = "err"
+WAITING_MSG = "waiting"
 
 
-class Server:
-    def __init__(self, port, listen_backlog, clients):
+class ClientHandler:
+    def __init__(self, client_sock, file_lock, finished_clients, clients):
         # Initialize server socket
         signal.signal(signal.SIGTERM, lambda signal, frame: self.stop())
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind(('', port))
-        self._server_socket.listen(listen_backlog)
+
+        self.file_lock = file_lock
+
+        self.client_sock = client_sock
+
+        self.finished_clients = finished_clients
 
         self.clients = clients
-
-        self.finished_clients = Value('i', 0)
-
-        self.file_lock = Lock()
-
-        self.processes = []
-
-    def run(self):
-        """
-        Dummy Server loop
-
-        Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
-        finishes, servers starts to accept new connections again
-        """
-        while True:
-            try:
-                client_sock = self.__accept_new_connection()
-
-                process = Process(target=create_client_handler,
-                                  args=(client_sock, self.file_lock, self.finished_clients, self.clients))
-
-                self.processes.append(process)
-                process.start()
-            except OSError:
-                break
 
     def __receive_message_length(self):
         try:
@@ -68,7 +48,7 @@ class Server:
                 f"action: receive_message_length | result: failed | error: {e}")
             return 0
 
-    def __handle_client_connection(self):
+    def handle_client_connection(self):
         """
         Read message from a specific client socket and closes the socket
 
@@ -77,6 +57,8 @@ class Server:
         """
         while True:
             try:
+
+                time.sleep(30)
                 msg_length = self.__receive_message_length()
 
                 if msg_length == 0:
@@ -85,8 +67,6 @@ class Server:
                 msg = self.__safe_receive(msg_length).rstrip()
                 self.__log_ip()
 
-                self.__check_exit(msg)
-
                 self.__process_message(msg)
 
             except OSError as e:
@@ -94,9 +74,7 @@ class Server:
                 logging.error(
                     f"action: receive_message | result: fail | error: {e}")
                 break
-            except Exception as e:
-                logging.error(
-                    f"action: any | result: fail | error: {e}")
+            except:
                 break
         self._close_client_socket()
 
@@ -105,64 +83,39 @@ class Server:
         logging.info(
             f'action: receive_message | result: success | ip: {addr[0]}')
 
-    def __check_exit(self, msg):
-        if msg.decode('utf-8') == EXIT:
-            raise socket.error("Client disconnected")
-
-    def __accept_new_connection(self):
-        """
-        Accept new connections
-
-        Function blocks until a connection to a client is made.
-        Then connection created is printed and returned
-        """
-
-        # Connection arrived
-        logging.info('action: accept_connections | result: in_progress')
-        c, addr = self._server_socket.accept()
-        logging.info(
-            f'action: accept_connections | result: success | ip: {addr[0]}')
-        return c
-
     def stop(self):
         logging.info(
             'action: receive_termination_signal | result: in_progress')
 
-        logging.info('action: closing listening socket | result: in_progress')
-        self._server_socket.close()
-        logging.info('action: closing listening socket | result: success')
-
-        for process in self.processes:
-            process.terminate()
+        self._close_client_socket()
 
         logging.info(
             f'action: receive_termination_signal | result: success')
 
     def _close_client_socket(self):
         logging.info('action: closing client socket | result: in_progress')
-        if self.client_sock:
 
-            self.finished_clients += 1
+        with self.finished_clients.get_lock():
+            self.finished_clients.value += 1
 
-            self.client_sock.close()
-
-            self.client_sock = None
+        self.client_sock.close()
         logging.info('action: closing client socket | result: success')
 
     def __send_success_message(self):
-        self.__safe_send(encode_string_utf8("suc"))
+        self.__safe_send(SUCCESS_MSG.encode())
         logging.info('action: send sucess message | result: success')
 
     def __send_error_message(self):
-        self.__safe_send(encode_string_utf8("err"))
+        self.__safe_send(ERROR_MSG.encode())
         logging.error('action: send error message | result: success')
 
-    def __safe_send(self, bytes_to_send):
-        total_sent = 0
+    def __safe_send(self, message: bytes):
+        n = 0
+        max_tries = 5
 
-        while total_sent < len(bytes_to_send):
-            n = self.client_sock.send(bytes_to_send[total_sent:])
-            total_sent += n
+        while n != len(message) and max_tries > 0:
+            n = self.client_sock.send(message)
+            max_tries -= 1
         return
 
     def __safe_receive(self, buffer_length: int):
@@ -177,20 +130,23 @@ class Server:
         return buffer
 
     def __process_message(self, message: bytes):
-        msg = decode_utf8(message)
+        msg = message.decode()
 
         split_msg = msg.split(",")
+        logging.info(split_msg)
         if msg == EXIT:
             raise socket.error("Client disconnected")
         elif len(split_msg) == 2 and split_msg[0] == WINNERS:
-            self.__send_winners(split_msg[1])
+            with self.file_lock:
+                self.__send_winners(split_msg[1])
         else:
-            process_bets(msg)
+            with self.file_lock:
+                process_bets(msg)
             self.__send_success_message()
 
     def __send_winners(self, agency: str):
-        if self.finished_clients < self.clients:
-            self.__send_and_wait_confirmation(encode_string_utf8("waiting"))
+        if self.finished_clients.value < self.clients:
+            self.__send(WAITING_MSG.encode())
             return
 
         bets = load_bets()
@@ -201,16 +157,22 @@ class Server:
 
         response = ",".join(dnis)
 
-        self.__send_and_wait_confirmation(encode_string_utf8(response))
+        self.__send(response.encode())
 
-    def __send_and_wait_confirmation(self, message: bytes):
-
+    def __send(self, message: bytes):
         self.__safe_send(len(message).to_bytes(MAX_MESSAGE_BYTES, 'little'))
 
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
+        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
             raise socket.error("rejected")
 
         self.__safe_send(message)
 
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
+        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
             raise socket.error("rejected")
+
+
+def create_client_handler(client_socket, file_lock, finished_clients, clients):
+    c_handler = ClientHandler(client_socket, file_lock,
+                              finished_clients, clients)
+
+    c_handler.handle_client_connection()
