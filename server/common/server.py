@@ -37,7 +37,7 @@ class Server:
     def __receive_message_length(self):
         try:
 
-            msg_length = int.from_bytes(self.client_sock.recv(
+            msg_length = int.from_bytes(self.__safe_receive(
                 MAX_MESSAGE_BYTES).rstrip(), "little")
 
             # Enviar confirmado? Que pasa si llega fuera de orden
@@ -67,8 +67,7 @@ class Server:
             if msg_length == 0:
                 return
 
-            msg = self.client_sock.recv(
-                msg_length).rstrip()
+            msg = self.__safe_receive(msg_length).rstrip()
             addr = self.client_sock.getpeername()
             logging.info(
                 f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
@@ -79,7 +78,7 @@ class Server:
         except OSError as e:
             self.__send_error_message()
             logging.error(
-                "action: receive_message | result: fail | error: {e}")
+                f"action: receive_message | result: fail | error: {e}")
         finally:
             self._close_client_socket()
 
@@ -134,3 +133,14 @@ class Server:
             n = self.client_sock.send(message.encode())
             max_tries -= 1
         return
+
+    def __safe_receive(self, buffer_length):
+
+        n = 0
+
+        buffer = bytes()
+        while n < buffer_length:
+            message = self.client_sock.recv(buffer_length)
+            buffer += message
+            n += len(message)
+        return buffer
