@@ -40,6 +40,7 @@ Recibe la confirmacion del servidor
 6. Vuelve a paso 3 hasta que no hayan mas bytes para leer en el archivo
 7. Cliente cierra conexion
 8. Finaliza ejecucion
+9. Crea una nueva conexion, pidiendo al servidor los ganadores de la apuesta, si no esta disponible, cierra la conexion y espera a enviar de vuelta, si esta disponible recibe los DNIs ganadores e imprime la cantidad de ganadores
 
 ### Protocolo
 El mensaje enviado del cliente al servidor esta conformado por

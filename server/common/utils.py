@@ -1,5 +1,6 @@
 import csv
 import datetime
+import socket
 import time
 import logging
 
@@ -30,24 +31,21 @@ class Bet:
         self.number = int(number)
 
     @staticmethod
-    def deserialize(message: bytes):
-        bet_string = message.decode()
-
-        agency, first_name, last_name, document, birthdate, number = bet_string.split(
+    def deserialize(message: str):
+        agency, first_name, last_name, document, birthdate, number = message.split(
             BET_MESSAGE_FIELD_SEPARATOR)
 
         return Bet(agency, first_name, last_name, document, birthdate, number)
 
     @staticmethod
-    def deserialize_multiple(message: bytes):
-        bet_string = message.decode()
+    def deserialize_multiple(message: str):
 
         bets = []
 
-        for bet in bet_string.split(BET_BATCH_SEPARATOR):
+        for bet in message.split(BET_BATCH_SEPARATOR):
             if not bet:
                 continue
-            bets.append(Bet.deserialize(bet.encode()))
+            bets.append(Bet.deserialize(bet))
 
         return bets
 
@@ -86,8 +84,12 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_incoming_message(message: bytes):
+def process_bets(message: str):
     bets = Bet.deserialize_multiple(message)
     store_bets(bets)
     logging.info(
         f"action: apuestas_almacenadas | result: success | agencia: {bets[0].agency}.")
+
+
+def get_winner_bets_by_agency(bets: list[Bet], agency: str) -> list[Bet]:
+    return list(filter(lambda bet: has_won(bet) and bet.agency == int(agency), bets))

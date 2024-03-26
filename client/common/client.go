@@ -54,6 +54,7 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) Shutdown() error {
+	c.SendMessage([]byte("exit"), false)
 	c.conn.Close()
 	c.isFinished = true
 	return nil
@@ -64,27 +65,29 @@ func (c *Client) SendMessageLength(message_length int) error {
 
 	binary.LittleEndian.PutUint32(bs, uint32(message_length))
 
-	return c.SendAny(bs)
+	return c.SendAndWaitConfirm(bs, true)
 }
 
-func (c *Client) SendMessage(message []byte) error {
+func (c *Client) SendMessage(message []byte, wait_for_confirm bool) error {
+	if err := c.SendMessageLength(len(message)); err != nil {
+		return err
+	}
+	return c.SendAndWaitConfirm(message, wait_for_confirm)
+}
 
-	err := c.SendMessageLength(len(message))
-
-	if err != nil {
+func (c *Client) SendAndWaitConfirm(message []byte, wait_for_confirm bool) error {
+	if err := c.SafeSend(message); err != nil {
 		return err
 	}
 
-	err = c.SendAny(message)
-
-	if err != nil {
-		return err
+	if wait_for_confirm {
+		return c.ReceiveConfirmMsg()
 	}
 
-	return err
+	return nil
 }
 
-func (c *Client) SendAny(message []byte) error {
+func (c *Client) SafeSend(message []byte) error {
 	n := 0
 	var err error
 
@@ -101,31 +104,47 @@ func (c *Client) SendAny(message []byte) error {
 			return err
 		}
 	}
+	return err
+}
 
-	err = c.ReceiveConfirmMsg()
+func (c *Client) ReceiveConfirmMsg() error {
+	buf, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
 
-	if err != nil {
-		return err
+	response := string(buf)
+	if response == "suc" {
+		log.Infof("action: receive_confirm_message | result: success | client_id: %v",
+			c.config.ID,
+		)
+	} else if response == "err" {
+		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v",
+			c.config.ID,
+		)
 	}
 
 	return err
 }
 
-func (c *Client) ReceiveConfirmMsg() error {
-	buf := make([]byte, CONFIRM_MSG_LENGTH)
-	n, err := c.conn.Read(buf)
+func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
+	buf := make([]byte, length)
 
-	if err != nil || n != CONFIRM_MSG_LENGTH || string(buf) == "err" {
-		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		return err
+	_, err := c.conn.Read(buf)
+
+	return buf, err
+
+}
+
+func (c *Client) Receive() (res []byte, res_error error) {
+	rcv_length, err := c.SafeReceive(MAX_MSG_BYTES)
+
+	c.SafeSend([]byte("suc"))
+
+	msg_length := int(binary.LittleEndian.Uint32(rcv_length))
+
+	if msg_length == 0 {
+		return []byte{}, err
 	}
 
-	log.Errorf("action: receive_confirm_message | result: sucess | client_id: %v",
-		c.config.ID,
-	)
+	res, _ = c.SafeReceive(msg_length)
 
-	return err
+	return res, c.SafeSend([]byte("suc"))
 }

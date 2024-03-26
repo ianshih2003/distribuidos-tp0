@@ -132,4 +132,6 @@ func main() {
 
 	logrus.Infof("action: apuestas_enviadas | result: success | client_id: %s", clientConfig.ID)
 
+	agency.AskForWinners()
+
 }
