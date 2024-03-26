@@ -29,7 +29,7 @@ func (agency *Agency) Start() {
 
 	defer file.Close()
 
-	defer agency.client.createClientSocket()
+	defer agency.client.Shutdown()
 
 	if err != nil {
 		log.Errorf("action: abrir_archivo | result: fail | client_id %s | error %v", agency.client.config.ID, err)
@@ -58,6 +58,5 @@ func (agency *Agency) Start() {
 func (agency *Agency) SendBets(bets []*Bet) {
 	serialized := serialize_multiple(bets)
 
-	log.Infof("serialized %s", string(serialized))
 	agency.client.SendMessage(serialized)
 }
