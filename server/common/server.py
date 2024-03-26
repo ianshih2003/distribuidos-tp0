@@ -40,8 +40,6 @@ class Server:
             msg_length = int.from_bytes(self.__safe_receive(
                 MAX_MESSAGE_BYTES).rstrip(), "little")
 
-            # Enviar confirmado? Que pasa si llega fuera de orden
-
             logging.info(
                 f"action: receive_message_length | result: success | length: {msg_length}")
 
