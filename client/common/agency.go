@@ -95,7 +95,6 @@ func (agency *Agency) AskForWinners() error {
 }
 
 func parseWinners(bytes []byte) []string {
-	log.Infof("%d", len(strings.Split(string(bytes), ",")))
 	return strings.Split(string(bytes), ",")
 }
 
