@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+const BATCH_SEPARATOR = ";"
+
 // Bet entity
 type Bet struct {
 	agency    string
@@ -40,5 +42,5 @@ func serializeMultiple(bets []*Bet) []byte {
 		}
 	}
 
-	return bytes.Join(serialized_bets, []byte(";"))
+	return bytes.Join(serialized_bets, []byte(BATCH_SEPARATOR))
 }

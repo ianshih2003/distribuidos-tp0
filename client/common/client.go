@@ -11,6 +11,9 @@ import (
 
 const CONFIRM_MSG_LENGTH = 3
 const MAX_MSG_BYTES = 4
+const SUCCESS_MSG = "suc"
+const ERROR_MSG = "err"
+const EXIT_MSG = "exit"
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -55,7 +58,7 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) Shutdown() error {
-	c.SendMessage([]byte("exit"), false)
+	c.SendMessage([]byte(EXIT_MSG), false)
 	c.conn.Close()
 	c.isFinished = true
 	return nil
@@ -112,11 +115,11 @@ func (c *Client) ReceiveConfirmMsg() error {
 	buf, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
 
 	response := string(buf)
-	if response == "suc" {
+	if response == SUCCESS_MSG {
 		log.Infof("action: receive_confirm_message | result: success | client_id: %v",
 			c.config.ID,
 		)
-	} else if response == "err" {
+	} else if response == ERROR_MSG {
 		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v",
 			c.config.ID,
 		)
@@ -170,7 +173,7 @@ func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
 func (c *Client) Receive() (res []byte, res_error error) {
 	rcv_length, err := c.SafeReceive(MAX_MSG_BYTES)
 
-	c.SafeSend([]byte("suc"))
+	c.SafeSend([]byte(SUCCESS_MSG))
 
 	msg_length := int(binary.LittleEndian.Uint32(rcv_length))
 
@@ -180,5 +183,5 @@ func (c *Client) Receive() (res []byte, res_error error) {
 
 	res, _ = c.SafeReceive(msg_length)
 
-	return res, c.SafeSend([]byte("suc"))
+	return res, c.SafeSend([]byte(SUCCESS_MSG))
 }
