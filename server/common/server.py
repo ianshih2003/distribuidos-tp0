@@ -205,5 +205,5 @@ class Server:
 
         self.__safe_send(message)
 
-        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG":
+        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
             raise socket.error("rejected")
