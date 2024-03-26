@@ -32,7 +32,7 @@ func (b *Bet) serialize() []byte {
 	return []byte(fmt.Sprintf("%s|%s|%s|%s|%s|%s", b.agency, b.name, b.last_name, b.document, b.birthdate, b.number))
 }
 
-func serialize_multiple(bets []*Bet) []byte {
+func serializeMultiple(bets []*Bet) []byte {
 	serialized_bets := make([][]byte, len(bets))
 	for i, bet := range bets {
 		if bet != nil {

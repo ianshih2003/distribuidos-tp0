@@ -56,7 +56,7 @@ func (agency *Agency) Start() {
 }
 
 func (agency *Agency) SendBets(bets []*Bet) {
-	serialized := serialize_multiple(bets)
+	serialized := serializeMultiple(bets)
 
 	agency.client.SendMessage(serialized)
 }
