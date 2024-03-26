@@ -100,7 +100,7 @@ func parseBets(bets_str []string, id string) []*Bet {
 }
 
 func (agency *Agency) SendBets(bets []*Bet) {
-	serialized := serialize_multiple(bets)
+	serialized := serializeMultiple(bets)
 
 	agency.client.SendMessage(serialized)
 }
