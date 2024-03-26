@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"errors"
 	"net"
 	"time"
 
@@ -124,12 +125,45 @@ func (c *Client) ReceiveConfirmMsg() error {
 	return err
 }
 
+func (c *Client) TryReceiveAll(length int) (n int, res []byte, res_error error) {
+	result := make([]byte, length)
+
+	n, err := c.conn.Read(result)
+
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if n == length {
+		return n, result, nil
+	}
+
+	return n, result, errors.New("MISSING")
+}
+
 func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
+	n, result, err := c.TryReceiveAll(length)
 	buf := make([]byte, length)
+	bytes_read := 0
 
-	_, err := c.conn.Read(buf)
+	if err == nil {
+		return result, err
+	}
 
-	return buf, err
+	bytes_read += n
+
+	for bytes_read < length {
+		n, err = c.conn.Read(buf)
+		if err != nil {
+			break
+		} else if n == 0 {
+			return result, err
+		}
+		result = append(result, buf[:n]...)
+		bytes_read += n
+	}
+
+	return result, err
 
 }
 
