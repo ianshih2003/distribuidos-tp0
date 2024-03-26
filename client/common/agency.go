@@ -31,7 +31,7 @@ func (agency *Agency) Start() {
 
 	defer file.Close()
 
-	defer agency.client.createClientSocket()
+	defer agency.client.Shutdown()
 
 	if err != nil {
 		log.Errorf("action: abrir_archivo | result: fail | client_id %s | error %v", agency.client.config.ID, err)
@@ -45,7 +45,8 @@ func (agency *Agency) Start() {
 	}
 
 	for {
-		buffer := make([]byte, agency.client.config.MaxBatchSize)
+		// Para tener en cuenta que se agrega la agencia
+		buffer := make([]byte, agency.client.config.MaxBatchSize-1024)
 
 		n, err := file.Read(buffer)
 
@@ -101,6 +102,5 @@ func parseBets(bets_str []string, id string) []*Bet {
 func (agency *Agency) SendBets(bets []*Bet) {
 	serialized := serialize_multiple(bets)
 
-	log.Infof("serialized %s", string(serialized))
 	agency.client.SendMessage(serialized)
 }

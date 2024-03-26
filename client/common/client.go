@@ -90,7 +90,7 @@ func (c *Client) SendAny(message []byte) error {
 
 	message_length := len(message)
 
-	for n != message_length {
+	for n < message_length {
 		n, err = c.conn.Write(message)
 
 		if err != nil {
@@ -115,7 +115,7 @@ func (c *Client) ReceiveConfirmMsg() error {
 	buf := make([]byte, CONFIRM_MSG_LENGTH)
 	n, err := c.conn.Read(buf)
 
-	if err != nil || n != CONFIRM_MSG_LENGTH {
+	if err != nil || n != CONFIRM_MSG_LENGTH || string(buf) == "err" {
 		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,

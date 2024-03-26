@@ -4,7 +4,8 @@ import signal
 from common.utils import process_incoming_message
 
 MAX_MESSAGE_BYTES = 4
-TIMEOUT = 2
+TIMEOUT = 1.0
+EXIT = "exit"
 
 
 class Server:
@@ -38,18 +39,20 @@ class Server:
             msg_length = int.from_bytes(self.__safe_receive(
                 MAX_MESSAGE_BYTES).rstrip(), "little")
 
-            # Enviar confirmado? Que pasa si llega fuera de orden
-
             logging.info(
                 f"action: receive_message_length | result: success | length: {msg_length}")
 
             self.__send_success_message()
 
             return msg_length
-        except:
+        except socket.error as e:
+            logging.error(
+                f"action: receive_message_length | result: failed | error: client disconnected")
+            raise e
+        except Exception as e:
             self.__send_error_message()
             logging.error(
-                f"action: receive_message_length | result: failed | error: cant convert to int")
+                f"action: receive_message_length | result: failed | error: {e}")
             return 0
 
     def __handle_client_connection(self):
@@ -59,7 +62,6 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        self.client_sock.settimeout(TIMEOUT)
         while True:
             try:
                 msg_length = self.__receive_message_length()
@@ -68,9 +70,9 @@ class Server:
                     return
 
                 msg = self.__safe_receive(msg_length).rstrip()
-                addr = self.client_sock.getpeername()
-                logging.info(
-                    f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+                self.__log_ip()
+
+                self.__check_exit(msg)
 
                 process_incoming_message(msg)
 
@@ -80,7 +82,18 @@ class Server:
                 logging.error(
                     f"action: receive_message | result: fail | error: {e}")
                 break
+            except:
+                break
         self._close_client_socket()
+
+    def __log_ip(self):
+        addr = self.client_sock.getpeername()
+        logging.info(
+            f'action: receive_message | result: success | ip: {addr[0]}')
+
+    def __check_exit(self, msg):
+        if msg.decode() == EXIT:
+            raise socket.error("Client disconnected")
 
     def __accept_new_connection(self):
         """
@@ -123,7 +136,7 @@ class Server:
 
     def __send_error_message(self):
         self.__safe_send("err")
-        logging.info('action: send error message | result: success')
+        logging.error('action: send error message | result: success')
 
     def __safe_send(self, message):
         n = 0
@@ -135,7 +148,6 @@ class Server:
         return
 
     def __safe_receive(self, buffer_length):
-
         n = 0
 
         buffer = bytes()
@@ -143,4 +155,5 @@ class Server:
             message = self.client_sock.recv(buffer_length)
             buffer += message
             n += len(message)
+
         return buffer
