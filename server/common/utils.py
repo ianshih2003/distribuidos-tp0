@@ -3,7 +3,7 @@ import datetime
 import time
 import logging
 
-from server.common.bet import Bet
+from common.bet import Bet
 
 
 """ Bets storage location. """
