@@ -41,6 +41,13 @@ Recibe la confirmacion del servidor
 El mensaje enviado del cliente al servidor esta conformado por
 `{agencia}|{nombre}|{apellido}|{documento}|{fecha de nacimiento}|{numero}`
 
+* `Agencia`: Un numero entero de cualquier tamaño
+* `Nombre`: Una cadena de tamaño variable
+* `Apellido`: Una cadena de tamaño variable
+* `Documento`: una numero de 8 digitos
+* `Fecha de nacimiento`: Una cadena que indica la fecha en el formato YYYY-MM-DD
+* `Numero`: Una numero de 4 digitos que representa el numero a apostar
+
 Flujo general:
 
 ![flujo general](imgs/flujo_general.png)

@@ -125,7 +125,7 @@ class Server:
 
     def __safe_send(self, message):
         total_sent = 0
-        bytes_to_send = message.encode()
+        bytes_to_send = message.encode('utf-8')
 
         while total_sent < len(message):
             n = self.client_sock.send(bytes_to_send[total_sent:])

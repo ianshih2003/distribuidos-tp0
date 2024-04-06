@@ -130,9 +130,7 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	bet := common.NewBet(v.GetString("id"), v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
+	agency := common.NewAgency(clientConfig, v)
 
-	agency := common.NewAgency(bet, clientConfig)
-
-	agency.SendBet()
+	agency.Start()
 }

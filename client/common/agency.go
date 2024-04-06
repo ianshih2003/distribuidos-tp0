@@ -2,6 +2,7 @@ package common
 
 import (
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // Agency entity
@@ -10,8 +11,11 @@ type Agency struct {
 	client *Client
 }
 
-func NewAgency(bet *Bet, client_config ClientConfig) *Agency {
+func NewAgency(client_config ClientConfig, v *viper.Viper) *Agency {
 	client := NewClient(client_config)
+
+	bet := NewBet(v.GetString("id"), v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
+
 	agency := &Agency{
 		bet:    bet,
 		client: client,
@@ -32,4 +36,8 @@ func (agency *Agency) SendBet() {
 		bet.document,
 		bet.number,
 	)
+}
+
+func (agency *Agency) Start() {
+	agency.SendBet()
 }
