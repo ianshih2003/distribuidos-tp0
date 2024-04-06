@@ -67,6 +67,26 @@ Ejemplo de flujo para la siguiente apuesta:
 
 ![flujo ejemplo](imgs/flujo_ejemplo.png)
 
+#### Soporte para batches
+Para permitir que las agencias puedan mandar mas de una apuesta en una misma consulta, se utilizo el caracter `;` para unir multiples apuestas en el mismo mensaje.
+
+El tamaño del batch es configurable a traves de la variable de entorno `max_batch_size`. La cantidad de apuestas que se mandan es variable, dependiendo de la longitud de los campos que compone cada apuesta.
+
+Ejemplo:
+
+```
+1|Santiago Lionel|Lorca|30904465|1999-03-17|2201;1|Agustin Emanuel|Zambrano|21689196|2000-05-10|9325;1|Tiago Nicolás|Rivera|34407251|2001-08-29|1033;1|Camila Rocio|Varela|37130775|1995-05-09|4179
+```
+
+Esto se descompone en las apuestas
+```
+1|Santiago Lionel|Lorca|30904465|1999-03-17|2201
+1|Agustin Emanuel|Zambrano|21689196|2000-05-10|9325
+1|Tiago Nicolás|Rivera|34407251|2001-08-29|1033
+1|Camila Rocio|Varela|37130775|1995-05-09|4179
+```
+
+
 
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 

@@ -2,7 +2,9 @@
 
 
 import datetime
+
 BET_MESSAGE_FIELD_SEPARATOR = "|"
+BET_BATCH_SEPARATOR = ";"
 
 
 class Bet:
@@ -27,3 +29,15 @@ class Bet:
             BET_MESSAGE_FIELD_SEPARATOR)
 
         return Bet(agency, first_name, last_name, document, birthdate, number)
+
+    @staticmethod
+    def deserialize_multiple(message: str):
+
+        bets = []
+
+        for bet in message.split(BET_BATCH_SEPARATOR):
+            if not bet:
+                continue
+            bets.append(Bet.deserialize(bet))
+
+        return bets
