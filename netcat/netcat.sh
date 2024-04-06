@@ -1,15 +1,13 @@
 #!/bin/bash
 
-MSG="Hola mundo"
-SERVER_IP=server
-TIMEOUT=3
-PORT=12345
 
-res=$(nc -w $TIMEOUT $SERVER_IP $PORT <<< $MSG)
+res=$(echo $MSG | nc -w $TIMEOUT $SERVER_IP $PORT)
 
 if [ "$MSG" = "$res" ]
 then
     echo "Servidor respondio correctamente"
+    return 0
 else
     echo "Servidor respondio incorrectamente"
+    return 1
 fi
