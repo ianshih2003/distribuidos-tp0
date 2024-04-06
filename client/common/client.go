@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"errors"
 	"net"
 	"os"
 	"os/signal"
@@ -120,13 +121,16 @@ func (c *Client) SendMessage(message []byte) error {
 }
 
 func (c *Client) SendAny(message []byte) error {
-	n := 0
 	var err error
+
+	total_bytes_sent := 0
 
 	message_length := len(message)
 
-	for n != message_length {
-		n, err = c.conn.Write(message)
+	for total_bytes_sent < message_length {
+		n, err := c.conn.Write(message[total_bytes_sent:])
+
+		total_bytes_sent += n
 
 		if err != nil {
 			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
@@ -147,10 +151,9 @@ func (c *Client) SendAny(message []byte) error {
 }
 
 func (c *Client) ReceiveConfirmMsg() error {
-	buf := make([]byte, CONFIRM_MSG_LENGTH)
-	n, err := c.conn.Read(buf)
+	n, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
 
-	if err != nil || n != CONFIRM_MSG_LENGTH {
+	if err != nil || len(n) != CONFIRM_MSG_LENGTH {
 		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,
@@ -163,4 +166,46 @@ func (c *Client) ReceiveConfirmMsg() error {
 	)
 
 	return err
+}
+
+func (c *Client) TryReceiveAll(length int) (n int, res []byte, res_error error) {
+	result := make([]byte, length)
+
+	n, err := c.conn.Read(result)
+
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if n == length {
+		return n, result, nil
+	}
+
+	return n, result, errors.New("MISSING")
+}
+
+func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
+	n, result, err := c.TryReceiveAll(length)
+	buf := make([]byte, length)
+	bytes_read := 0
+
+	if err == nil {
+		return result, err
+	}
+
+	bytes_read += n
+
+	for bytes_read < length {
+		n, err = c.conn.Read(buf)
+		if err != nil {
+			break
+		} else if n == 0 {
+			return result, err
+		}
+		result = append(result, buf[:n]...)
+		bytes_read += n
+	}
+
+	return result, err
+
 }

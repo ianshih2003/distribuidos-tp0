@@ -124,12 +124,12 @@ class Server:
         logging.info('action: send error message | result: success')
 
     def __safe_send(self, message):
-        n = 0
-        max_tries = 5
+        total_sent = 0
+        bytes_to_send = message.encode()
 
-        while n != len(message) and max_tries > 0:
-            n = self.client_sock.send(message.encode())
-            max_tries -= 1
+        while total_sent < len(message):
+            n = self.client_sock.send(bytes_to_send[total_sent:])
+            total_sent += n
         return
 
     def __safe_receive(self, buffer_length):
