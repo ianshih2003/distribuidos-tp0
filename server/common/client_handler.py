@@ -58,7 +58,6 @@ class ClientHandler:
         while True:
             try:
 
-                time.sleep(30)
                 msg_length = self.__receive_message_length()
 
                 if msg_length == 0:
