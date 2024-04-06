@@ -10,10 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
@@ -39,12 +35,6 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
-
-	v.BindEnv("nombre")
-	v.BindEnv("apellido")
-	v.BindEnv("documento")
-	v.BindEnv("nacimiento")
-	v.BindEnv("numero")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -95,19 +85,6 @@ func PrintConfig(v *viper.Viper) {
 		v.GetDuration("loop.period"),
 		v.GetString("log.level"),
 	)
-}
-
-func InitializeSignalListener(client *common.Client) {
-	sigs := make(chan os.Signal, 1)
-
-	signal.Notify(sigs, syscall.SIGTERM)
-
-	go func(client *common.Client) {
-		sig := <-sigs
-		logrus.Infof("action: received termination signal | result: in_progress | signal: %s", sig)
-		client.Shutdown()
-		logrus.Infof("action: received termination signal | result: success | signal: %s", sig)
-	}(client)
 }
 
 func main() {
