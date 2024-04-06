@@ -46,6 +46,7 @@ func (agency *Agency) Start() {
 
 		if err != nil {
 			log.Errorf("action: leer_apuestas | result: fail | client_id %s | error %v", agency.client.config.ID, err)
+			return
 		}
 
 		agency.SendBets(bets)

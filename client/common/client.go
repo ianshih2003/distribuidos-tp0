@@ -14,6 +14,7 @@ import (
 
 const CONFIRM_MSG_LENGTH = 3
 const MAX_MSG_BYTES = 4
+const EXIT_MSG = "exit"
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -78,6 +79,7 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) Shutdown() error {
+	c.SendMessage([]byte(EXIT_MSG))
 	c.conn.Close()
 	c.isFinished = true
 	return nil

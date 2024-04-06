@@ -47,7 +47,7 @@ def load_bets() -> list[Bet]:
 
 
 def process_incoming_message(message: bytes):
-    bets = Bet.deserialize_multiple(message)
+    bets = Bet.deserialize_multiple(message.decode())
     store_bets(bets)
     logging.info(
         f"action: apuestas_almacenadas | result: success | agencia: {bets[0].agency}.")
