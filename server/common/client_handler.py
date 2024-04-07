@@ -1,8 +1,8 @@
 import socket
 import logging
 import signal
-import time
-from common.utils import load_bets, process_bets, get_winner_bets_by_agency
+from common.utils import decode_utf8, encode_string_utf8, load_bets, process_bets, get_winner_bets_by_agency
+
 
 MAX_MESSAGE_BYTES = 4
 EXIT = "exit"
@@ -57,7 +57,6 @@ class ClientHandler:
         """
         while True:
             try:
-
                 msg_length = self.__receive_message_length()
 
                 if msg_length == 0:
@@ -73,7 +72,9 @@ class ClientHandler:
                 logging.error(
                     f"action: receive_message | result: fail | error: {e}")
                 break
-            except:
+            except Exception as e:
+                logging.error(
+                    f"action: any | result: fail | error: {e}")
                 break
         self._close_client_socket()
 
@@ -85,15 +86,12 @@ class ClientHandler:
     def stop(self):
         logging.info(
             'action: receive_termination_signal | result: in_progress')
-
         self._close_client_socket()
-
         logging.info(
             f'action: receive_termination_signal | result: success')
 
     def _close_client_socket(self):
         logging.info('action: closing client socket | result: in_progress')
-
         with self.finished_clients.get_lock():
             self.finished_clients.value += 1
 
@@ -101,20 +99,19 @@ class ClientHandler:
         logging.info('action: closing client socket | result: success')
 
     def __send_success_message(self):
-        self.__safe_send(SUCCESS_MSG.encode())
+        self.__safe_send(encode_string_utf8(SUCCESS_MSG))
         logging.info('action: send sucess message | result: success')
 
     def __send_error_message(self):
-        self.__safe_send(ERROR_MSG.encode())
+        self.__safe_send(encode_string_utf8(ERROR_MSG))
         logging.error('action: send error message | result: success')
 
-    def __safe_send(self, message: bytes):
-        n = 0
-        max_tries = 5
+    def __safe_send(self, bytes_to_send):
+        total_sent = 0
 
-        while n != len(message) and max_tries > 0:
-            n = self.client_sock.send(message)
-            max_tries -= 1
+        while total_sent < len(bytes_to_send):
+            n = self.client_sock.send(bytes_to_send[total_sent:])
+            total_sent += n
         return
 
     def __safe_receive(self, buffer_length: int):
@@ -129,23 +126,20 @@ class ClientHandler:
         return buffer
 
     def __process_message(self, message: bytes):
-        msg = message.decode()
+        msg = decode_utf8(message)
 
         split_msg = msg.split(",")
-        logging.info(split_msg)
         if msg == EXIT:
             raise socket.error("Client disconnected")
         elif len(split_msg) == 2 and split_msg[0] == WINNERS:
-            with self.file_lock:
-                self.__send_winners(split_msg[1])
+            self.__send_winners(split_msg[1])
         else:
-            with self.file_lock:
-                process_bets(msg)
+            process_bets(msg)
             self.__send_success_message()
 
     def __send_winners(self, agency: str):
         if self.finished_clients.value < self.clients:
-            self.__send(WAITING_MSG.encode())
+            self.__send_and_wait_confirmation(encode_string_utf8(WAITING_MSG))
             return
 
         bets = load_bets()
@@ -156,17 +150,18 @@ class ClientHandler:
 
         response = ",".join(dnis)
 
-        self.__send(response.encode())
+        self.__send_and_wait_confirmation(encode_string_utf8(response))
 
-    def __send(self, message: bytes):
+    def __send_and_wait_confirmation(self, message: bytes):
+
         self.__safe_send(len(message).to_bytes(MAX_MESSAGE_BYTES, 'little'))
 
-        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
+        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
             raise socket.error("rejected")
 
         self.__safe_send(message)
 
-        if self.__safe_receive(CONFIRMATION_MSG_LENGTH).decode() != SUCCESS_MSG:
+        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
             raise socket.error("rejected")
 
 
