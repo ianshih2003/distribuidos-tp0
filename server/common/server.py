@@ -172,7 +172,6 @@ class Server:
         msg = decode_utf8(message)
 
         split_msg = msg.split(",")
-        logging.info(split_msg)
         if msg == EXIT:
             raise socket.error("Client disconnected")
         elif len(split_msg) == 2 and split_msg[0] == WINNERS:
@@ -183,7 +182,7 @@ class Server:
 
     def __send_winners(self, agency: str):
         if self.finished_clients < self.clients:
-            self.__send(encode_string_utf8("waiting"))
+            self.__send_and_wait_confirmation(encode_string_utf8("waiting"))
             return
 
         bets = load_bets()
@@ -194,9 +193,10 @@ class Server:
 
         response = ",".join(dnis)
 
-        self.__send(encode_string_utf8(response))
+        self.__send_and_wait_confirmation(encode_string_utf8(response))
 
-    def __send(self, message: bytes):
+    def __send_and_wait_confirmation(self, message: bytes):
+
         self.__safe_send(len(message).to_bytes(MAX_MESSAGE_BYTES, 'little'))
 
         if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
