@@ -182,7 +182,7 @@ func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
 
 }
 
-func (c *Client) ReceiveAndWaitConfirm() (res []byte, res_error error) {
+func (c *Client) ReceiveAndSendConfirm() (res []byte, res_error error) {
 	rcv_length, err := c.SafeReceive(MAX_MSG_BYTES)
 
 	c.SendAny([]byte(SUCCESS_MSG))
