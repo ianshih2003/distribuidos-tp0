@@ -14,6 +14,7 @@ import (
 
 const CONFIRM_MSG_LENGTH = 3
 const MAX_MSG_BYTES = 4
+const EXIT_MSG = "exit"
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -21,6 +22,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	MaxBatchSize  int
 }
 
 // Client Entity that encapsulates how
@@ -77,21 +79,10 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) Shutdown() error {
+	c.SendMessage([]byte(EXIT_MSG))
 	c.conn.Close()
 	c.isFinished = true
 	return nil
-}
-
-// StartClient Send messages to the server
-func (c *Client) StartClient(message []byte) error {
-	// Create the connection the server
-	c.createClientSocket()
-
-	err := c.SendMessage(message)
-
-	c.Shutdown()
-
-	return err
 }
 
 func (c *Client) SendMessageLength(message_length int) error {

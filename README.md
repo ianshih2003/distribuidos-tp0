@@ -22,8 +22,8 @@ Los targets disponibles son:
 ### Servidor
 El servidor representa una central de Loteria Nacional: recibe apuestas de distintas agencias y realiza un sorteo. El servidor actual funciona de la sigueinte forma:
 1. Servidor acepta una nueva conexion
-2. Servidor recibe mensaje del cliente, que contiene la longitud de la apuesta a realizar y procede a responder con `suc` si se recibio correctamente
-3. Servidor recibe otro mensaje del cliente, esta vez conteniendo la apuesta, la almacena en el archivo `bets.csv` y responde `suc`
+2. Servidor recibe mensaje del cliente, que contiene la longitud del batch de apuestas a realizar y procede a responder con `suc` si se recibio correctamente
+3. Servidor recibe otro mensaje del cliente, esta vez conteniendo el batch de apuestas, la almacena en el archivo `bets.csv` y responde `suc`
 4. Servidor desconecta al cliente
 5. Servidor procede a recibir una conexion nuevamente
 
@@ -31,11 +31,15 @@ El servidor representa una central de Loteria Nacional: recibe apuestas de disti
 ### Cliente
 El cliente representa una agencia de apuestas y envia mensajes de la siguiente forma.
 1. Cliente se conecta al servidor
-2. Cliente envia la longitud de la apuesta a enviar.
+2. Cliente lee archivo de apuestas
+3. Cliente lee una cantidad de bytes establecida por la configuracion `max_batch_size`
+4. Cliente envia la longitud del batch de apuestas a enviar.
 Recibe confirmacion del servidor
-3. Cliente envia la apuesta.
+5. Cliente envia el batch de apuestas.
 Recibe la confirmacion del servidor
-4. Finaliza ejecucion
+6. Vuelve a paso 3 hasta que no hayan mas bytes para leer en el archivo
+7. Cliente cierra conexion
+8. Finaliza ejecucion
 
 ### Protocolo
 El mensaje enviado del cliente al servidor esta conformado por
@@ -62,6 +66,26 @@ Ejemplo de flujo para la siguiente apuesta:
 * Numero: 7574
 
 ![flujo ejemplo](imgs/flujo_ejemplo.png)
+
+#### Soporte para batches
+Para permitir que las agencias puedan mandar mas de una apuesta en una misma consulta, se utilizo el caracter `;` para unir multiples apuestas en el mismo mensaje.
+
+El tamaño del batch es configurable a traves de la variable de entorno `max_batch_size`. La cantidad de apuestas que se mandan es variable, dependiendo de la longitud de los campos que compone cada apuesta.
+
+Ejemplo:
+
+```
+1|Santiago Lionel|Lorca|30904465|1999-03-17|2201;1|Agustin Emanuel|Zambrano|21689196|2000-05-10|9325;1|Tiago Nicolás|Rivera|34407251|2001-08-29|1033;1|Camila Rocio|Varela|37130775|1995-05-09|4179
+```
+
+Esto se descompone en las apuestas
+```
+1|Santiago Lionel|Lorca|30904465|1999-03-17|2201
+1|Agustin Emanuel|Zambrano|21689196|2000-05-10|9325
+1|Tiago Nicolás|Rivera|34407251|2001-08-29|1033
+1|Camila Rocio|Varela|37130775|1995-05-09|4179
+```
+
 
 
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
