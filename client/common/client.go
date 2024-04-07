@@ -182,8 +182,13 @@ func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
 		} else if n == 0 {
 			return result, net.ErrClosed
 		}
-		result = append(result, buf[:bytes_read]...)
+
+		copy(result[:len(buf)], buf)
+
 		bytes_read += n
+
+		buf = make([]byte, length)
+
 	}
 
 	return result, err
