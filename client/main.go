@@ -107,7 +107,7 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	agency := common.NewAgency(clientConfig, v)
+	agency := common.NewAgency(clientConfig, v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
 
 	agency.Start()
 }
