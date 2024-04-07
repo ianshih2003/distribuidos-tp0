@@ -21,7 +21,7 @@ class Bet:
 
     @staticmethod
     def deserialize(message: bytes):
-        bet_string = message.decode()
+        bet_string = message.decode('utf-8')
 
         agency, first_name, last_name, document, birthdate, number = bet_string.split(
             BET_MESSAGE_FIELD_SEPARATOR)
