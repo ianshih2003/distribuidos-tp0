@@ -57,3 +57,11 @@ def process_bets(message: str):
 
 def get_winner_bets_by_agency(bets: list[Bet], agency: str) -> list[Bet]:
     return list(filter(lambda bet: has_won(bet) and bet.agency == int(agency), bets))
+
+
+def decode_utf8(bytes: bytes):
+    return bytes.decode('utf-8')
+
+
+def encode_string_utf8(message: str):
+    return message.encode('utf-8')

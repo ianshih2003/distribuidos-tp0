@@ -104,7 +104,7 @@ func (c *Client) SendMessage(message []byte, wait_for_confirm bool) error {
 }
 
 func (c *Client) SendAndWaitConfirm(message []byte, wait_for_confirm bool) error {
-	if err := c.SafeSend(message); err != nil {
+	if err := c.SendAny(message); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (c *Client) SendAny(message []byte) error {
 }
 
 func (c *Client) ReceiveConfirmMsg() error {
-	n, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
+	buf, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
 
 	response := string(buf)
 	if response == SUCCESS_MSG {
@@ -202,7 +202,7 @@ func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
 func (c *Client) Receive() (res []byte, res_error error) {
 	rcv_length, err := c.SafeReceive(MAX_MSG_BYTES)
 
-	c.SafeSend([]byte(SUCCESS_MSG))
+	c.SendAny([]byte(SUCCESS_MSG))
 
 	msg_length := int(binary.LittleEndian.Uint32(rcv_length))
 
@@ -212,5 +212,5 @@ func (c *Client) Receive() (res []byte, res_error error) {
 
 	res, _ = c.SafeReceive(msg_length)
 
-	return res, c.SafeSend([]byte(SUCCESS_MSG))
+	return res, c.SendAny([]byte(SUCCESS_MSG))
 }
