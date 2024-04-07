@@ -82,7 +82,9 @@ class Server:
                 logging.error(
                     f"action: receive_message | result: fail | error: {e}")
                 break
-            except:
+            except Exception as e:
+                logging.error(
+                    f"action: any | result: fail | error: {e}")
                 break
         self._close_client_socket()
 
@@ -92,7 +94,7 @@ class Server:
             f'action: receive_message | result: success | ip: {addr[0]}')
 
     def __check_exit(self, msg):
-        if msg.decode() == EXIT:
+        if msg.decode('utf-8') == EXIT:
             raise socket.error("Client disconnected")
 
     def __accept_new_connection(self):
