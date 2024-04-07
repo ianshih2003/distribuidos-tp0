@@ -16,6 +16,8 @@ Los targets disponibles son:
 * **docker-compose-logs**: Permite ver los logs actuales del proyecto. Acompañar con `grep` para lograr ver mensajes de una aplicación específica dentro del compose.
 * **docker-image**: Buildea las imágenes a ser utilizadas tanto en el servidor como en el cliente. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para testear nuevos cambios en las imágenes antes de arrancar el proyecto.
 * **build**: Compila la aplicación cliente para ejecución en el _host_ en lugar de en docker. La compilación de esta forma es mucho más rápida pero requiere tener el entorno de Golang instalado en la máquina _host_.
+* **netcat**: Buildea la imagen de `netcat` y ejecuta el container.
+
 
 ### Servidor
 El servidor del presente ejemplo es un EchoServer: los mensajes recibidos por el cliente son devueltos inmediatamente. El servidor actual funciona de la siguiente forma:
@@ -61,11 +63,14 @@ client1  | time="2023-03-17 04:37:19" level=info msg="action: timeout_detected |
 client1  | time="2023-03-17 04:37:19" level=info msg="action: loop_finished | result: success | client_id: 1"
 client1 exited with code 0
 ```
+
 ### Creacion de docker-compose
 `python3 create-compose.py <n>`
 
 Crea un nuevo archivo de docker-compose con n clientes, si se deja vacio se crea con 1 solo cliente
 
+### Netcat
+El script `netcat` se conecta al servidor una sola vez, envia el mensaje "Hola Mundo" e imprime "Servidor repondio correctamente" si el servidor responde con el mismo mensaje enviado.
 
 ## Parte 1: Introducción a Docker
 En esta primera parte del trabajo práctico se plantean una serie de ejercicios que sirven para introducir las herramientas básicas de Docker que se utilizarán a lo largo de la materia. El entendimiento de las mismas será crucial para el desarrollo de los próximos TPs.

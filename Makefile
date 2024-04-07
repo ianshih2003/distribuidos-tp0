@@ -29,6 +29,11 @@ docker-compose-up: docker-image
 	docker compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 
+docker-compose-up-nb: 
+	docker compose -f docker-compose-dev.yaml up -d --build
+.PHONY: docker-compose-up-nb
+
+
 docker-compose-down:
 	docker compose -f docker-compose-dev.yaml stop -t 1
 	docker compose -f docker-compose-dev.yaml down
@@ -37,3 +42,8 @@ docker-compose-down:
 docker-compose-logs:
 	docker compose -f docker-compose-dev.yaml logs -f
 .PHONY: docker-compose-logs
+
+netcat:
+	docker build -f ./netcat/Dockerfile -t "netcat:latest" .
+	docker run --network tp0_testing_net netcat:latest
+.PHONY: netcat
