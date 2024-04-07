@@ -40,6 +40,7 @@ func InitializeSignalListener(client *Client) {
 
 		if err != nil {
 			logrus.Infof("action: received termination signal | result: error | signal: %s | error: %v", sig, err)
+			return
 		}
 		logrus.Infof("action: received termination signal | result: success | signal: %s", sig)
 	}(client)
