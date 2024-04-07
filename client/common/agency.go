@@ -97,7 +97,7 @@ func (agency *Agency) AskForWinners() error {
 
 		agency.client.SendMessage([]byte(message), false)
 
-		res, err := agency.client.ReceiveAndWaitConfirm()
+		res, err := agency.client.ReceiveAndSendConfirm()
 
 		if err != nil {
 			break
