@@ -68,6 +68,7 @@ class Server:
             'action: receive_termination_signal | result: in_progress')
 
         logging.info('action: closing listening socket | result: in_progress')
+        self._server_socket.shutdown(socket.SHUT_RDWR)
         self._server_socket.close()
         logging.info('action: closing listening socket | result: success')
 
