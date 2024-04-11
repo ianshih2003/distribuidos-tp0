@@ -95,6 +95,7 @@ class ClientHandler:
         with self.finished_clients.get_lock():
             self.finished_clients.value += 1
 
+        self.client_sock.shutdown(socket.SHUT_RDWR)
         self.client_sock.close()
         logging.info('action: closing client socket | result: success')
 
