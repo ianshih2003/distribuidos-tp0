@@ -1,8 +1,7 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
+	"encoding/binary"
 	"net"
 	"os"
 	"os/signal"
@@ -12,6 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
+
+const CONFIRM_MSG_LENGTH = 3
+const MAX_MSG_BYTES = 4
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -81,55 +83,115 @@ func (c *Client) Shutdown() error {
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1
+// StartClient Send messages to the server
+func (c *Client) StartClient(message []byte) error {
+	// Create the connection the server
+	c.createClientSocket()
 
-loop:
-	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); !c.isFinished; {
-		select {
-		case <-timeout:
-			log.Infof("action: timeout_detected | result: success | client_id: %v",
-				c.config.ID,
-			)
-			break loop
-		default:
-		}
+	err := c.SendMessage(message)
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+	c.Shutdown()
 
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		msgID++
-		c.conn.Close()
+	return err
+}
+
+func (c *Client) SendMessageLength(message_length int) error {
+	bs := make([]byte, MAX_MSG_BYTES)
+
+	binary.LittleEndian.PutUint32(bs, uint32(message_length))
+
+	return c.SendAny(bs)
+}
+
+func (c *Client) SendMessage(message []byte) error {
+
+	err := c.SendMessageLength(len(message))
+
+	if err != nil {
+		return err
+	}
+
+	err = c.SendAny(message)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (c *Client) SendAny(message []byte) error {
+	var err error
+
+	total_bytes_sent := 0
+
+	message_length := len(message)
+
+	for total_bytes_sent < message_length {
+		n, err := c.conn.Write(message[total_bytes_sent:])
+
+		total_bytes_sent += n
 
 		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
 			)
-			return
-		}
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-
-		if !isFinished {
-			time.Sleep(c.config.LoopPeriod)
+			return err
 		}
 	}
 
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	err = c.ReceiveConfirmMsg()
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (c *Client) ReceiveConfirmMsg() error {
+	n, err := c.SafeReceive(CONFIRM_MSG_LENGTH)
+
+	if err != nil || len(n) != CONFIRM_MSG_LENGTH {
+		log.Errorf("action: receive_confirm_message | result: fail | client_id: %v | error: %v",
+			c.config.ID,
+			err,
+		)
+		return err
+	}
+
+	log.Errorf("action: receive_confirm_message | result: sucess | client_id: %v",
+		c.config.ID,
+	)
+
+	return err
+}
+
+func (c *Client) SafeReceive(length int) (res []byte, res_error error) {
+	buf := make([]byte, length)
+	bytes_read := 0
+	result := make([]byte, length)
+
+	var err error
+
+	for bytes_read < length {
+		n, err := c.conn.Read(buf)
+
+		if err != nil {
+			break
+		} else if n == 0 {
+			return result, net.ErrClosed
+		}
+
+		copy(result[:len(buf)], buf)
+
+		bytes_read += n
+
+		buf = make([]byte, length)
+
+	}
+
+	return result, err
+
 }

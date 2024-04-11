@@ -98,7 +98,7 @@ func main() {
 	}
 
 	// Print program config with debugging purposes
-	PrintConfig(v)
+	// PrintConfig(v)
 
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
@@ -107,6 +107,7 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	agency := common.NewAgency(clientConfig, v.GetString("nombre"), v.GetString("apellido"), v.GetString("documento"), v.GetString("nacimiento"), v.GetString("numero"))
+
+	agency.Start()
 }

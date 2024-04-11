@@ -1,6 +1,9 @@
 import socket
 import logging
 import signal
+from common.utils import process_incoming_message
+
+MAX_MESSAGE_BYTES = 4
 
 
 class Server:
@@ -31,6 +34,24 @@ class Server:
             except OSError:
                 break
 
+    def __receive_message_length(self):
+        try:
+
+            msg_length = int.from_bytes(self.__safe_receive(
+                MAX_MESSAGE_BYTES).rstrip(), "little")
+
+            logging.info(
+                f"action: receive_message_length | result: success | length: {msg_length}")
+
+            self.__send_success_message()
+
+            return msg_length
+        except:
+            self.__send_error_message()
+            logging.error(
+                f"action: receive_message_length | result: failed | error: cant convert to int")
+            return 0
+
     def __handle_client_connection(self):
         """
         Read message from a specific client socket and closes the socket
@@ -39,16 +60,23 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = self.client_sock.recv(1024).rstrip().decode('utf-8')
+            msg_length = self.__receive_message_length()
+
+            if msg_length == 0:
+                return
+
+            msg = self.__safe_receive(msg_length).rstrip()
             addr = self.client_sock.getpeername()
             logging.info(
                 f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            self.client_sock.send("{}\n".format(msg).encode('utf-8'))
+
+            process_incoming_message(msg)
+
+            self.__send_success_message()
         except OSError as e:
+            self.__send_error_message()
             logging.error(
-                "action: receive_message | result: fail | error: {e}")
+                f"action: receive_message | result: fail | error: {e}")
         finally:
             self._close_client_socket()
 
@@ -86,3 +114,31 @@ class Server:
             self.client_sock.close()
             self.client_sock = None
         logging.info('action: closing client socket | result: success')
+
+    def __send_success_message(self):
+        self.__safe_send("suc")
+        logging.info('action: send sucess message | result: success')
+
+    def __send_error_message(self):
+        self.__safe_send("err")
+        logging.info('action: send error message | result: success')
+
+    def __safe_send(self, message):
+        total_sent = 0
+        bytes_to_send = message.encode('utf-8')
+
+        while total_sent < len(message):
+            n = self.client_sock.send(bytes_to_send[total_sent:])
+            total_sent += n
+        return
+
+    def __safe_receive(self, buffer_length):
+
+        n = 0
+
+        buffer = bytes()
+        while n < buffer_length:
+            message = self.client_sock.recv(buffer_length)
+            buffer += message
+            n += len(message)
+        return buffer
