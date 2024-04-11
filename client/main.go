@@ -112,4 +112,5 @@ func main() {
 	agency := common.NewAgency(clientConfig)
 
 	agency.Start()
+
 }

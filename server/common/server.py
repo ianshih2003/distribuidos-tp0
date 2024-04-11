@@ -1,21 +1,27 @@
 import socket
 import logging
 import signal
-from common.utils import process_incoming_message
+from common.utils import decode_utf8, encode_string_utf8, load_bets, process_bets, get_winner_bets_by_agency
 
 MAX_MESSAGE_BYTES = 4
-TIMEOUT = 1.0
 EXIT = "exit"
+WINNERS = "winners"
+CONFIRMATION_MSG_LENGTH = 3
+SUCCESS_MSG = "suc"
 
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, clients):
         # Initialize server socket
         signal.signal(signal.SIGTERM, lambda signal, frame: self.stop())
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.client_sock = None
+
+        self.clients = clients
+
+        self.finished_clients = 0
 
     def run(self):
         """
@@ -74,9 +80,8 @@ class Server:
 
                 self.__check_exit(msg)
 
-                process_incoming_message(msg)
+                self.__process_message(msg)
 
-                self.__send_success_message()
             except OSError as e:
                 self.__send_error_message()
                 logging.error(
@@ -128,28 +133,31 @@ class Server:
     def _close_client_socket(self):
         logging.info('action: closing client socket | result: in_progress')
         if self.client_sock:
+
+            self.finished_clients += 1
+
             self.client_sock.close()
+
             self.client_sock = None
         logging.info('action: closing client socket | result: success')
 
     def __send_success_message(self):
-        self.__safe_send("suc")
+        self.__safe_send(encode_string_utf8("suc"))
         logging.info('action: send sucess message | result: success')
 
     def __send_error_message(self):
-        self.__safe_send("err")
+        self.__safe_send(encode_string_utf8("err"))
         logging.error('action: send error message | result: success')
 
-    def __safe_send(self, message):
+    def __safe_send(self, bytes_to_send):
         total_sent = 0
-        bytes_to_send = message.encode('utf-8')
 
-        while total_sent < len(message):
+        while total_sent < len(bytes_to_send):
             n = self.client_sock.send(bytes_to_send[total_sent:])
             total_sent += n
         return
 
-    def __safe_receive(self, buffer_length):
+    def __safe_receive(self, buffer_length: int):
         n = 0
 
         buffer = bytes()
@@ -159,3 +167,42 @@ class Server:
             n += len(message)
 
         return buffer
+
+    def __process_message(self, message: bytes):
+        msg = decode_utf8(message)
+
+        split_msg = msg.split(",")
+        if msg == EXIT:
+            raise socket.error("Client disconnected")
+        elif len(split_msg) == 2 and split_msg[0] == WINNERS:
+            self.__send_winners(split_msg[1])
+        else:
+            process_bets(msg)
+            self.__send_success_message()
+
+    def __send_winners(self, agency: str):
+        if self.finished_clients < self.clients:
+            self.__send_and_wait_confirmation(encode_string_utf8("waiting"))
+            return
+
+        bets = load_bets()
+
+        winner_bets = get_winner_bets_by_agency(bets, agency)
+
+        dnis = map(lambda bet: bet.document, winner_bets)
+
+        response = ",".join(dnis)
+
+        self.__send_and_wait_confirmation(encode_string_utf8(response))
+
+    def __send_and_wait_confirmation(self, message: bytes):
+
+        self.__safe_send(len(message).to_bytes(MAX_MESSAGE_BYTES, 'little'))
+
+        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
+            raise socket.error("rejected")
+
+        self.__safe_send(message)
+
+        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LENGTH)) != SUCCESS_MSG:
+            raise socket.error("rejected")

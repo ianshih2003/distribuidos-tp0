@@ -22,7 +22,8 @@ class Bet:
         self.number = int(number)
 
     @staticmethod
-    def deserialize(message: bytes):
+    def deserialize(message: str):
+
         agency, first_name, last_name, document, birthdate, number = message.split(
             BET_MESSAGE_FIELD_SEPARATOR)
 

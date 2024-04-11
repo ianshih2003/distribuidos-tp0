@@ -1,5 +1,6 @@
 import csv
 import datetime
+import socket
 import time
 import logging
 
@@ -46,8 +47,21 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_incoming_message(message: bytes):
-    bets = Bet.deserialize_multiple(message.decode('utf-8'))
+def process_bets(message: str):
+    bets = Bet.deserialize_multiple(message)
+
     store_bets(bets)
     logging.info(
         f"action: apuestas_almacenadas | result: success | agencia: {bets[0].agency}.")
+
+
+def get_winner_bets_by_agency(bets: list[Bet], agency: str) -> list[Bet]:
+    return list(filter(lambda bet: has_won(bet) and bet.agency == int(agency), bets))
+
+
+def decode_utf8(bytes: bytes):
+    return bytes.decode('utf-8')
+
+
+def encode_string_utf8(message: str):
+    return message.encode('utf-8')
